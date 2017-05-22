@@ -1,0 +1,401 @@
+<!doctype html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+		<title>Adding Salt to AutoYaST</title>
+
+		<link rel="stylesheet" href="css/reveal.css">
+		<link rel="stylesheet" href="css/theme/opensuse.css">
+
+		<!-- Theme used for syntax highlighting of code -->
+		<link rel="stylesheet" href="lib/css/atom-one-light.css">
+
+		<!-- Printing and PDF exports -->
+		<script>
+			var link = document.createElement( 'link' );
+			link.rel = 'stylesheet';
+			link.type = 'text/css';
+			link.href = window.location.search.match( /print-pdf/gi ) ? 'css/print/pdf.css' : 'css/print/paper.css';
+			document.getElementsByTagName( 'head' )[0].appendChild( link );
+		</script>
+	</head>
+
+	<body>
+		<div class="reveal">
+			<div class="slides">
+				<section data-background-image="assets/images/opensuse/title.svg" class="title">
+          <img data-src="assets/images/opensuse/logo.png" class="logo" />
+          <h1>Adding Salt to AutoYaST</h1>
+          <div class="authors">
+            Imobach González Sosa<br/>
+            YaST Developer<br/>
+            igonzalezsosa@suse.com
+          </div>
+        </section>
+
+				<section data-background-image="assets/images/opensuse/title.svg" class="break">
+          <h1>AutoYaST</h1>
+        </section>
+
+				<section>
+          <h2>What is AutoYaST</h2>
+          <ul>
+            <li>Tool to perform unattended installation/upgrade of openSUSE/SUSE systems</li>
+            <li>Partitioning, network configuration, software installation...</li>
+            <li>... and configuration of additional services</li>
+            <!-- system registration -->
+            <li>Allow configuration of already installed systems</li>
+            <li>SUSE Manager uses AutoYaST under the hood</li>
+          </ul>
+        </section>
+
+				<section>
+          <h2>AutoYaST profiles</h2>
+          <pre class="stretch"><code><profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
+  <general>
+    <!-- General options related to the installation process -->
+  </general>
+  <partitioning config:type="list">
+    <!-- Partitioning schema -->
+  </partitioning>
+  <software>
+    <!-- Software selection -->
+  </software>
+  <scripts>
+    <!-- Scripts to be executed pre/during/after installation-->
+  </scripts>
+  <network>
+    <!-- Network configuration -->
+  </network>
+  <!-- ... -->
+</profile>
+</code></pre>
+        </section>
+
+				<section>
+          <h2>A minimal profile</h2>
+          <pre class="stretch"><code><profile xmlns="http://www.suse.com/1.0/yast2ns" xmlns:config="http://www.suse.com/1.0/configns">
+  <users config:type="list">
+    <user>
+      <encrypted config:type="boolean">false</encrypted>
+      <fullname>root</fullname>
+      <gid>0</gid>
+      <home>/root</home>
+      <shell>/bin/bash</shell>
+      <user_password>nots3cr3t</user_password>
+      <username>root</username>
+    </user>
+  </users>
+</profile>
+</code></pre>
+        </section>
+
+        <section>
+          <h2>Writing a profile</h2>
+
+          <div class="left-col">
+            <ul>
+              <li>Clone an installed system (and tune it if needed):
+                <ul>
+                  <li>AutoYaST UI</li>
+                  <li>Command line</li>
+                </ul>
+              </li>
+              <li>Write one from scratch</li>
+            </ul>
+          </div>
+
+          <div class="right-col">
+            <img data-src="assets/images/screenshots/autoyast2-ui.png" class="screenshot" />
+          </div>
+        </section>
+
+				<section>
+          <h2>Limitations</h2>
+          <ul>
+            <li>Limited to YaST modules (no Redis, PostgreSQL, ... you name it)</li>
+            <!-- <li>Scripts and files can be used but...</li> -->
+            <li>Installation is not 100% reproducible (may need additional work)</li>
+            <li>Only applies to the openSUSE/SUSE family</li>
+          </ul>
+        </section>
+
+				<section data-background-image="assets/images/opensuse/title.svg" class="break">
+          <h1>Software Configuration<br/>Management</h1>
+        </section>
+
+				<section>
+          <h2>At a glance</h2>
+          <ul>
+            <li>Enable administrators to configure systems and track changes</li>
+            <li>Usually the administrator describes how the system should look like</li>
+            <li>Automated and reproducible</li>
+            <li>Many options with a wide range of features</li>
+          </ul>
+        </section>
+
+				<section>
+          <h2>Salt</h2>
+          <div class="left-col">
+            <ul>
+              <li>Configuration management and remote execution engine</li>
+              <li>Event-driven</li>
+              <li>Pretty flexible architecture</li>
+              <li>Superb documentation</li>
+              <li>Monitoring capabilities</li>
+              <li>Library of reusable components</li>
+            </ul>
+          </div>
+          <div class="right-col">
+            <img data-src="assets/images/saltstack-logo.svg" alt="SaltStack Logo" class="logo" />
+          </div>
+        </section>
+
+				<section>
+          <h2>Salt jargon</h2>
+
+          <ul>
+            <li>Roles: master and minions</li>
+            <li>State: system configuration description</li>
+            <li>Pillar: data to be used in states (sensitive data, configuration, etc.)</li>
+            <li>Formula: reusable and pre-written Salt states</li>
+            <li>Grains: data associated to Minions</li>
+          </ul>
+        </section>
+
+				<section>
+          <h2>Example state</h2>
+          <pre><code class="yaml">apache:
+  pkg.installed: []
+  service.running:
+    - watch:
+      - pkg: apache
+      - file: /etc/httpd/conf/httpd.conf
+      - user: apache
+
+/etc/httpd/conf/httpd.conf:
+  file.managed:
+    - source: salt://apache/httpd.conf
+    - user: root
+    - group: root
+    - mode: 644
+          </code></pre>
+        </section>
+
+				<section data-background-image="assets/images/opensuse/title.svg" class="break">
+          <h1>AutoYaST + Salt</h1>
+        </section>
+
+				<section>
+          <h2>The best of both worlds</h2>
+          <ul>
+            <li>AutoYaST does the initial installation:<br/>
+              partitioning, network configuration, software installation, etc.</li>
+            <!-- including YaST goodness -->
+            <li>Salt performs additional configuration:<br/>
+              more software installation, services configuration, etc.</li>
+          </ul>
+        </section>
+
+				<section>
+          <h2>Server based configuration</h2>
+          <pre><code>
+<configuration_management>
+  <type>salt</type> <!-- puppet support is experimental -->
+  <master>salt.my-network.lan</master>
+  <auth_attempts config:type="integer">3</auth_attempts>
+  <auth_time_out config:type="integer">50</auth_time_out>
+</configuration_management>
+          </code></pre>
+
+          <ul>
+            <li>Minion needs to be accepted on the Salt master</li>
+            <li>System administrator intervention is needed</li>
+          </ul>
+        </section>
+
+				<section>
+          <h2>Preseeded keys</h2>
+          <pre><code>
+<configuration_management>
+  <type>salt</type>
+  <master>salt.my-network.lan</master>
+  <keys_url>http://my-network.lan/salt/keys</keys_url>
+  <!-- <keys_url>usb:/</keys_url> -->
+</configuration_management>
+          </code></pre>
+
+          <ul>
+            <li>Keys are pre-accepted by the Salt master</li>
+            <li>System administrator intervention is not needed</li>
+            <li>Multiple keys can be stored at the same place (using different hostnames)</li>
+          </ul>
+        </section>
+
+        <section>
+          <video controls class="stretch">
+            <source data-src="assets/videos/salt-master.webm" type="video/webm"/>
+          </video>
+        </section>
+
+				<section>
+          <h2>Masterless mode</h2>
+          <pre><code>
+<configuration_management>
+  <type>salt</type>
+  <states_url>http://my-network.lan/salt/redis.tar.gz</states_url>
+  <pillar_url>http://my-network.lan/salt/redis-configuration.tar.gz</pillar_url>
+</configuration_management>
+          </code></pre>
+
+          <ul>
+            <li>Salt server is not required</li>
+            <li>The module will retrieve states/formulas an pillars (optional)</li>
+          </ul>
+        </section>
+
+				<section data-background-image="assets/images/opensuse/title.svg" class="break">
+          <h1>Experimental features</h1>
+        </section>
+
+        <section>
+          <h2>Puppet support</h2>
+          <pre><code class="stretch">
+<!-- Masterless mode -->
+<configuration_management>
+  <type>puppet</type>
+  <modules_url>http://my-network.lan/puppet/webserver.tar.gz</modules_url>
+</configuration_management>
+          </code></pre>
+
+          <pre><code>
+<!-- Server based mode -->
+<configuration_management>
+  <type>puppet</type>
+  <master>puppet.my-network.lan</master>
+  <keys_url>http://my-network.lan/salt/keys</keys_url>
+</configuration_management>
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>SUSE Manager Parametrizable Salt Formulas</h2>
+          <ul>
+            <li>Mechanism to describe Pillars data</li>
+            <li>Enable developers to build a UI to expose them</li>
+          </ul>
+          <pre><code>
+timezone:
+  name: "Atlantic/Canary"
+  utc:  true
+          </code></pre>
+        </section>
+
+        <section>
+          <h2>SUSE Manager Parametrizable Salt Formulas</h2>
+          <div class="right-col">
+            <img data-src="assets/images/screenshots/suse-manager-formulas.png" class="screenshot" />
+          </div>
+          <div class="left-col">
+          <pre><code>timezone:
+  $type: hidden-group
+
+  name:
+    $type: select
+    $values: ["UTC",
+              "Atlantic/Canary",
+              "Europe/Berlin",
+              "US/Mountain"]
+    $default: Europe/Berlin
+
+  utc:
+    $type: boolean
+    $default: True</code></pre>
+          </div>
+        </section>
+
+        <section>
+          <video controls class="stretch">
+            <source data-src="assets/videos/salt-formulas.webm" type="video/webm"/>
+          </video>
+        </section>
+
+				<section data-background-image="assets/images/opensuse/title.svg" class="break">
+          <h1>Future</h1>
+        </section>
+
+        <section>
+          <h2>Some wild ideas</h2>
+          <ul>
+            <li>AutoYaST UI</li>
+            <li>Improve installer UI integration and errors handling</li>
+            <li>Cloning support</li>
+            <li>Puppet Hiera support</li>
+            <li>Git support</li>
+            <li>Plugins</li>
+          </ul>
+        </section>
+
+				<section data-background-image="assets/images/opensuse/title.svg" class="break">
+          <h1>Thanks!</h1>
+        </section>
+
+        <section>
+          <h2>Thanks to...</h2>
+          <ul>
+            <li>My beloved YaST team for taking care of this module</li>
+            <li>Duncan Mac-Vicar for his contribution and help</li>
+            <li>Hannes Kühnemund for requesting such a feature</li>
+            <li>The openSUSE Project!</li>
+          </ul>
+        </section>
+
+				<section data-background-image="assets/images/opensuse/title.svg" class="break">
+          <h1>Questions?</h1>
+        </section>
+
+        <section>
+          <h2>References</h2>
+          <ul>
+            <li><a href="https://github.com/yast/yast-configuration-management">YaST2 Configuration Management repository</a></li>
+            <li><a href="http://doc.opensuse.org/projects/autoyast/">AutoYaST documentation</a></li>
+            <li><a href="https://saltstack.com/">SaltStack</a></li>
+            <li><a href="https://saltstack.com/community/">Salt Open Source</a></li>
+            <li><a href="https://puppetlabs.com/">Puppet Labs</a></li>
+            <li><a href="https://www.suse.com/communities/blog/forms-formula-success/">"Forms are the Formula for Success"</a>, by Joachim Werner</li>
+          </ul>
+        </section>
+
+        <section class="join-us">
+          <img alt="Join Us" data-src="assets/images/opensuse/chameleon.png" class="screenshot" />
+          <p>Join Us at <a href="http://www.opensuse.org/">www.opensuse.org</a></p>
+        </section>
+			</div>
+    </div>
+
+		<script src="lib/js/head.min.js"></script>
+		<script src="js/reveal.js"></script>
+
+		<script>
+			// More info about config & dependencies:
+			// - https://github.com/hakimel/reveal.js#configuration
+			// - https://github.com/hakimel/reveal.js#dependencies
+			Reveal.initialize({
+        heigth: 1080,
+        width: 1920,
+        margin: 0.1,
+        center: false,
+        controls: false,
+				dependencies: [
+					{ src: 'plugin/markdown/marked.js' },
+					{ src: 'plugin/markdown/markdown.js' },
+					{ src: 'plugin/notes/notes.js', async: true },
+          { src: 'plugin/zoom-js/zoom.js', async: true },
+					{ src: 'plugin/highlight/highlight.js', async: true, callback: function() { hljs.initHighlightingOnLoad(); } }
+				]
+			});
+		</script>
+	</body>
+</html>
